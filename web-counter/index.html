@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="text/javascript">
+        Element.prototype.prependChild = function(child) { this.insertBefore(child, this.firstChild); };
+
+        var sock = null;
+        var ellog = null;
+        var tweets = null;
+        var giant_pandas = 0;
+        var red_pandas = 0;
+        window.onload = function () {
+            var wsuri;
+            ellog = document.getElementById('log');
+            tweets = document.getElementById('tweets');
+            if (window.location.protocol === "file:") {
+                wsuri = "ws://localhost:8081";
+            } else {
+                wsuri = "ws://" + window.location.hostname + ":8081";
+            }
+            if ("WebSocket" in window) {
+                sock = new WebSocket(wsuri);
+            } else if ("MozWebSocket" in window) {
+                sock = new MozWebSocket(wsuri);
+            } else {
+                log("Browser does not support WebSocket!");
+            }
+            if (sock) {
+                sock.onopen = function () {
+                    log("Connected to " + wsuri);
+                };
+                sock.onclose = function (e) {
+                    log("Connection closed (wasClean = " + e.wasClean + ", code = " + e.code + ", reason = '" + e.reason + "')");
+                    sock = null;
+                };
+                sock.onmessage = function (e) {
+                    //log("Got echo: " + e.data);
+                    var msg = JSON.parse(e.data);
+                    tweet(msg);
+                }
+            }
+        };
+
+        function log(m) {
+            ellog.innerHTML += m + '\n';
+            ellog.scrollTop = ellog.scrollHeight;
+        }
+
+        function tweet(m) {
+            var tweet = document.createElement("div");
+            var img = document.createElement("img");
+            var p = document.createElement("p");
+
+            img.src = "data:image/jpeg;base64," + m["py/state"]["entities"]["media"][0]["data"];
+            if (m["py/state"]["entities"]["media"][0]["panda_node_id"] == "169") {
+                img.title = "Giant Panda";
+                giant_pandas++;
+                document.getElementById('giant-panda-count').innerText = "" + giant_pandas;
+
+            } else {
+                img.title = "Red Panda";
+                red_pandas++;
+                document.getElementById('red-panda-count').innerText = "" + red_pandas;
+            }
+            img.style = "height: 200px;";
+
+            p.innerHTML = "<b>" + m["py/state"]["author"]["py/state"]["screen_name"] + "</b>\t" + m["py/state"]["text"];
+
+            tweet.appendChild(img);
+            tweet.appendChild(p);
+            tweet.classList += "tweet";
+
+            tweets.prependChild(tweet);
+        }
+    </script>
+    <title>Panda Twitter</title>
+</head>
+<body>
+<div style="float: left; text-align: center; margin-right: 10px;">
+<img src="panda-face.png" title="panda face emoji" />
+<h1>Panda</h1>
+    <h1>Twitter</h1>
+    <div id="panda-count">
+    <h3>Count</h3>
+    <p>Giant panda: <span id="giant-panda-count">0</span></p>
+        <p>Red panda : <span id="red-panda-count">0</span></p>
+</div>
+</div>
+<noscript>You must enable JavaScript</noscript>
+<div>
+<div id="tweets" style="height: 50em; overflow-y: scroll; background-color: #fafafa;"></div>
+<div id="log" style="height: 5em; overflow-y: scroll; background-color: #afa;"></div>
+    </div>
+<style>
+    html, body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    #tweets {
+        padding: 15px;
+    }
+</style>
+</body>
+</html>
